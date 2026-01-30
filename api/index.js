@@ -21,45 +21,53 @@ export default async function handler(req, res) {
     });
   }
 
-  try {
-    // 🔁 Backend API
-    const backendURL =
-      `https://codexvortex.vercel.app/api?key=Ravan&type=${encodeURIComponent(type)}&term=${encodeURIComponent(term)}`;
+  // 🔁 Backend APIs (Main + Backup)
+  const apis = [
+    `https://codexvortex.vercel.app/api?key=Ravan&type=${encodeURIComponent(type)}&term=${encodeURIComponent(term)}`,
+    `https://richswayam.vercel.app/api?key=Ravan&type=${encodeURIComponent(type)}&term=${encodeURIComponent(term)}`
+  ];
 
-    const response = await fetch(backendURL);
-    const text = await response.text();
+  let data = null;
+  let lastError = null;
 
-    let data;
+  for (const api of apis) {
     try {
+      const response = await fetch(api, { timeout: 10000 });
+
+      if (!response.ok) continue;
+
+      const text = await response.text();
+
       data = JSON.parse(text);
-    } catch (e) {
-      return res.status(500).json({
-        success: false,
-        message: "Backend returned invalid JSON",
-        developer: "@mynk_mynk_mynk"
-      });
+      break; // ✅ Success → loop stop
+
+    } catch (err) {
+      lastError = err.message;
+      continue; // ❌ Fail → try next API
     }
+  }
 
-    // 🧹 Remove unwanted credits/tags
-    delete data.credit;
-    delete data.Credit;
-    delete data.developer;
-    delete data.Developer;
-    delete data.LKSOCK;
-
-    // ✅ Final response
-    return res.status(200).json({
-      success: true,
-      result: data,
-      developer: "@mynk_mynk_mynk"
-    });
-
-  } catch (error) {
+  // ❌ All APIs failed
+  if (!data) {
     return res.status(500).json({
       success: false,
-      message: "Upstream API error",
-      error: error.message,
+      message: "All backend APIs are down",
+      error: lastError,
       developer: "@mynk_mynk_mynk"
     });
   }
+
+  // 🧹 Remove unwanted credits/tags
+  delete data.credit;
+  delete data.Credit;
+  delete data.developer;
+  delete data.Developer;
+  delete data.LKSOCK;
+
+  // ✅ Final response (Same Format)
+  return res.status(200).json({
+    success: true,
+    result: data,
+    developer: "@mynk_mynk_mynk"
+  });
 }
