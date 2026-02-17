@@ -21,29 +21,34 @@ export default async function handler(req, res) {
     });
   }
 
-  // 🔁 Backend APIs (Main + Backup)
-  const apis = [
-    `https://codexvortex.vercel.app/api?key=Ravan&type=${encodeURIComponent(type)}&term=${encodeURIComponent(term)}`,
-    `https://richswayam.vercel.app/api?key=Ravan&type=${encodeURIComponent(type)}&term=${encodeURIComponent(term)}`
-  ];
+  // 🔁 Aadhaar special API
+  const apis = type === "id_number"
+    ? [
+        `https://aadharid.asapiservices.workers.dev/?id_num=${encodeURIComponent(term)}`,
+        `https://codexvortex.vercel.app/api?key=Ravan&type=${encodeURIComponent(type)}&term=${encodeURIComponent(term)}`,
+        `https://richswayam.vercel.app/api?key=Ravan&type=${encodeURIComponent(type)}&term=${encodeURIComponent(term)}`
+      ]
+    : [
+        `https://codexvortex.vercel.app/api?key=Ravan&type=${encodeURIComponent(type)}&term=${encodeURIComponent(term)}`,
+        `https://richswayam.vercel.app/api?key=Ravan&type=${encodeURIComponent(type)}&term=${encodeURIComponent(term)}`
+      ];
 
   let data = null;
   let lastError = null;
 
   for (const api of apis) {
     try {
-      const response = await fetch(api, { timeout: 10000 });
+      const response = await fetch(api);
 
       if (!response.ok) continue;
 
       const text = await response.text();
-
       data = JSON.parse(text);
-      break; // ✅ Success → loop stop
+      break;
 
     } catch (err) {
       lastError = err.message;
-      continue; // ❌ Fail → try next API
+      continue;
     }
   }
 
@@ -64,7 +69,7 @@ export default async function handler(req, res) {
   delete data.Developer;
   delete data.LKSOCK;
 
-  // ✅ Final response (Same Format)
+  // ✅ Final response
   return res.status(200).json({
     success: true,
     result: data,
