@@ -1,6 +1,7 @@
 export default async function handler(req, res) {
   const { key, type, term } = req.query;
 
+  // ✅ API key check
   if (key !== "mynkz") {
     return res.status(401).json({
       success: false,
@@ -9,6 +10,7 @@ export default async function handler(req, res) {
     });
   }
 
+  // ✅ required params
   if (!type || !term) {
     return res.status(400).json({
       success: false,
@@ -17,6 +19,7 @@ export default async function handler(req, res) {
     });
   }
 
+  // 🔁 backend APIs
   const apis = type === "id_number"
     ? [
         `https://aadharid.asapiservices.workers.dev/?id_num=${encodeURIComponent(term)}`,
@@ -30,6 +33,7 @@ export default async function handler(req, res) {
 
   let data = null;
 
+  // 🔎 try APIs one by one
   for (const api of apis) {
     try {
       const response = await fetch(api);
@@ -37,7 +41,7 @@ export default async function handler(req, res) {
 
       const json = await response.json();
 
-      if (json && Object.keys(json).length > 0) {
+      if (json) {
         data = json;
         break;
       }
@@ -46,7 +50,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // ❌ No data found
+  // ❌ no backend response
   if (!data) {
     return res.status(200).json({
       success: false,
@@ -54,15 +58,46 @@ export default async function handler(req, res) {
     });
   }
 
-  // remove credits etc
+  // 🧹 remove unwanted tags
   delete data.credit;
   delete data.Credit;
   delete data.developer;
   delete data.Developer;
+  delete data.LKSOCK;
 
-  // ✅ FINAL RESPONSE (BOT FRIENDLY)
+  // 🔥 convert response → array format
+  let finalResult = [];
+
+  if (data?.data && Array.isArray(data.data)) {
+    finalResult = data.data;
+  } else if (data?.result?.data && Array.isArray(data.result.data)) {
+    finalResult = data.result.data;
+  } else if (Array.isArray(data.result)) {
+    finalResult = data.result;
+  } else if (Array.isArray(data)) {
+    finalResult = data;
+  }
+
+  // ❌ empty data
+  if (!finalResult || finalResult.length === 0) {
+    return res.status(200).json({
+      success: false,
+      result: []
+    });
+  }
+
+  // ✅ remove duplicate mobiles
+  const seen = new Set();
+  finalResult = finalResult.filter(item => {
+    if (!item.mobile) return true;
+    if (seen.has(item.mobile)) return false;
+    seen.add(item.mobile);
+    return true;
+  });
+
+  // ✅ FINAL BOT FRIENDLY OUTPUT
   return res.status(200).json({
     success: true,
-    result: data
+    result: finalResult
   });
 }
