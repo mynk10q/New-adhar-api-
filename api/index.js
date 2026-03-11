@@ -2,7 +2,7 @@ export default async function handler(req, res) {
   const { key, type, term } = req.query;
 
   // ✅ API key check
-  if (key !== "mynkz") {
+  if (key !== "loda") {
     return res.status(401).json({
       success: false,
       result: [],
