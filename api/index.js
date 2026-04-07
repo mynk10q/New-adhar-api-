@@ -19,21 +19,17 @@ export default async function handler(req, res) {
     });
   }
 
-  // 🔁 backend APIs (UPDATED)
+  // 🔁 backend APIs (with backup)
   const apis = type === "id_number"
     ? [
         `https://aadharid.asapiservices.workers.dev/?id_num=${encodeURIComponent(term)}`,
         `https://codexvortex.vercel.app/api?key=Ravan&type=${type}&term=${term}`,
         `https://richswayam.vercel.app/api?key=Ravan&type=${type}&term=${term}`,
-        
-        // ✅ NEW BACKUP API (last priority)
         `https://uersxinfo-aadhar.vercel.app/secure/aadhaar?term=${term}&access_key=lund2`
       ]
     : [
         `https://codexvortex.vercel.app/api?key=Ravan&type=${type}&term=${term}`,
         `https://richswayam.vercel.app/api?key=Ravan&type=${type}&term=${term}`,
-        
-        // ✅ backup for other types also (optional)
         `https://uersxinfo-aadhar.vercel.app/secure/aadhaar?term=${term}&access_key=lund2`
       ];
 
@@ -56,7 +52,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // ❌ no backend response
+  // ❌ no response
   if (!data) {
     return res.status(200).json({
       success: false,
@@ -64,28 +60,28 @@ export default async function handler(req, res) {
     });
   }
 
-  // 🧹 remove unwanted tags
+  // 🧹 remove unwanted keys
   delete data.credit;
   delete data.Credit;
   delete data.developer;
   delete data.Developer;
   delete data.LKSOCK;
 
-  // 🔥 convert response → array format
+  // 🔄 extract array safely
   let finalResult = [];
 
-  if (data?.data && Array.isArray(data.data)) {
+  if (Array.isArray(data?.data)) {
     finalResult = data.data;
-  } else if (data?.result?.data && Array.isArray(data.result.data)) {
+  } else if (Array.isArray(data?.result?.data)) {
     finalResult = data.result.data;
-  } else if (Array.isArray(data.result)) {
+  } else if (Array.isArray(data?.result)) {
     finalResult = data.result;
   } else if (Array.isArray(data)) {
     finalResult = data;
   }
 
-  // ❌ empty data
-  if (!finalResult || finalResult.length === 0) {
+  // ❌ empty check
+  if (!finalResult.length) {
     return res.status(200).json({
       success: false,
       result: []
@@ -93,15 +89,38 @@ export default async function handler(req, res) {
   }
 
   // ✅ remove duplicate mobiles
-  const seen = new Set();
+  const seenMobile = new Set();
   finalResult = finalResult.filter(item => {
     if (!item.mobile) return true;
-    if (seen.has(item.mobile)) return false;
-    seen.add(item.mobile);
+    if (seenMobile.has(item.mobile)) return false;
+    seenMobile.add(item.mobile);
     return true;
   });
 
-  // ✅ FINAL BOT FRIENDLY OUTPUT
+  // ✅ remove duplicate id_number
+  const seenId = new Set();
+  finalResult = finalResult.filter(item => {
+    const id = item.id || item.id_number;
+    if (!id) return true;
+    if (seenId.has(id)) return false;
+    seenId.add(id);
+    return true;
+  });
+
+  // 🔥 FINAL NORMALIZATION (MAIN FIX)
+  finalResult = finalResult.map(item => ({
+    id: item.id || item.id_number || "",
+    mobile: item.mobile || "",
+    name: item.name || "",
+    father_name: item.fname || item.father_name || "",
+    address: item.address || "",
+    alt_mobile: item.alt || item.alt_mobile || "",
+    circle: item.circle || "",
+    id_number: item.id || item.id_number || "",
+    email: item.email || ""
+  }));
+
+  // ✅ FINAL RESPONSE
   return res.status(200).json({
     success: true,
     result: finalResult
