@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     });
   }
 
-  // 🔁 backend APIs (with backup)
+  // 🔁 APIs (with backup)
   const apis = type === "id_number"
     ? [
         `https://aadharid.asapiservices.workers.dev/?id_num=${encodeURIComponent(term)}`,
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
 
   let data = null;
 
-  // 🔎 try APIs one by one
+  // 🔎 Try APIs (ONLY VALID DATA ACCEPT)
   for (const api of apis) {
     try {
       const response = await fetch(api);
@@ -43,16 +43,31 @@ export default async function handler(req, res) {
 
       const json = await response.json();
 
-      if (json) {
+      // 🔍 extract possible arrays
+      const extracted =
+        Array.isArray(json?.data) ? json.data :
+        Array.isArray(json?.result?.data) ? json.result.data :
+        Array.isArray(json?.result) ? json.result :
+        Array.isArray(json) ? json : [];
+
+      // ✅ check valid data
+      const hasValidData = extracted.some(item =>
+        (item.name && item.name.length > 2) ||
+        (item.mobile && item.mobile.length >= 10) ||
+        (item.address && item.address.length > 10)
+      );
+
+      if (hasValidData) {
         data = json;
         break;
       }
+
     } catch (e) {
       continue;
     }
   }
 
-  // ❌ no response
+  // ❌ no valid data
   if (!data) {
     return res.status(200).json({
       success: false,
@@ -67,7 +82,7 @@ export default async function handler(req, res) {
   delete data.Developer;
   delete data.LKSOCK;
 
-  // 🔄 extract array safely
+  // 🔄 extract final array
   let finalResult = [];
 
   if (Array.isArray(data?.data)) {
@@ -97,7 +112,7 @@ export default async function handler(req, res) {
     return true;
   });
 
-  // ✅ remove duplicate id_number
+  // ✅ remove duplicate ids
   const seenId = new Set();
   finalResult = finalResult.filter(item => {
     const id = item.id || item.id_number;
@@ -107,7 +122,7 @@ export default async function handler(req, res) {
     return true;
   });
 
-  // 🔥 FINAL NORMALIZATION (MAIN FIX)
+  // 🔥 FINAL NORMALIZATION
   finalResult = finalResult.map(item => ({
     id: item.id || item.id_number || "",
     mobile: item.mobile || "",
