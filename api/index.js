@@ -11,63 +11,27 @@ export default async function handler(req, res) {
   }
 
   // ✅ required params
-  if (!type || !term) {
+  if (!term) {
     return res.status(400).json({
       success: false,
       result: [],
-      message: "type and term required"
+      message: "term required"
     });
   }
 
-  // 🔁 APIs (with backup)
-  const apis = type === "id_number"
-    ? [
-        `https://aadharid.asapiservices.workers.dev/?id_num=${encodeURIComponent(term)}`,
-        `https://codexvortex.vercel.app/api?key=Ravan&type=${type}&term=${term}`,
-        `https://richswayam.vercel.app/api?key=Ravan&type=${type}&term=${term}`,
-        `https://uersxinfo-aadhar.vercel.app/secure/aadhaar?term=${term}&access_key=lund2`
-      ]
-    : [
-        `https://codexvortex.vercel.app/api?key=Ravan&type=${type}&term=${term}`,
-        `https://richswayam.vercel.app/api?key=Ravan&type=${type}&term=${term}`,
-        `https://uersxinfo-aadhar.vercel.app/secure/aadhaar?term=${term}&access_key=lund2`
-      ];
+  // 🔥 ONLY USERXINFO API
+  const api = `https://uersxinfo-aadhar.vercel.app/secure/aadhaar?term=${term}&access_key=lund2`;
 
   let data = null;
 
-  // 🔎 Try APIs (ONLY VALID DATA ACCEPT)
-  for (const api of apis) {
-    try {
-      const response = await fetch(api);
-      if (!response.ok) continue;
-
-      const json = await response.json();
-
-      // 🔍 extract possible arrays
-      const extracted =
-        Array.isArray(json?.data) ? json.data :
-        Array.isArray(json?.result?.data) ? json.result.data :
-        Array.isArray(json?.result) ? json.result :
-        Array.isArray(json) ? json : [];
-
-      // ✅ check valid data
-      const hasValidData = extracted.some(item =>
-        (item.name && item.name.length > 2) ||
-        (item.mobile && item.mobile.length >= 10) ||
-        (item.address && item.address.length > 10)
-      );
-
-      if (hasValidData) {
-        data = json;
-        break;
-      }
-
-    } catch (e) {
-      continue;
+  try {
+    const response = await fetch(api);
+    if (response.ok) {
+      data = await response.json();
     }
-  }
+  } catch (e) {}
 
-  // ❌ no valid data
+  // ❌ no data
   if (!data) {
     return res.status(200).json({
       success: false,
@@ -75,27 +39,16 @@ export default async function handler(req, res) {
     });
   }
 
-  // 🧹 remove unwanted keys
-  delete data.credit;
-  delete data.Credit;
-  delete data.developer;
-  delete data.Developer;
-  delete data.LKSOCK;
-
-  // 🔄 extract final array
+  // 🔄 extract array
   let finalResult = [];
 
-  if (Array.isArray(data?.data)) {
-    finalResult = data.data;
-  } else if (Array.isArray(data?.result?.data)) {
-    finalResult = data.result.data;
-  } else if (Array.isArray(data?.result)) {
+  if (Array.isArray(data?.result)) {
     finalResult = data.result;
-  } else if (Array.isArray(data)) {
-    finalResult = data;
+  } else if (Array.isArray(data?.data)) {
+    finalResult = data.data;
   }
 
-  // ❌ empty check
+  // ❌ empty
   if (!finalResult.length) {
     return res.status(200).json({
       success: false,
@@ -112,26 +65,16 @@ export default async function handler(req, res) {
     return true;
   });
 
-  // ✅ remove duplicate ids
-  const seenId = new Set();
-  finalResult = finalResult.filter(item => {
-    const id = item.id || item.id_number;
-    if (!id) return true;
-    if (seenId.has(id)) return false;
-    seenId.add(id);
-    return true;
-  });
-
   // 🔥 FINAL NORMALIZATION
   finalResult = finalResult.map(item => ({
-    id: item.id || item.id_number || "",
+    id: item.id || "",
     mobile: item.mobile || "",
     name: item.name || "",
-    father_name: item.fname || item.father_name || "",
+    father_name: item.fname || "",
     address: item.address || "",
-    alt_mobile: item.alt || item.alt_mobile || "",
+    alt_mobile: item.alt || "",
     circle: item.circle || "",
-    id_number: item.id || item.id_number || "",
+    id_number: item.id || "",
     email: item.email || ""
   }));
 
