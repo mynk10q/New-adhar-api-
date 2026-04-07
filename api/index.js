@@ -1,7 +1,16 @@
 export default async function handler(req, res) {
-  const { key, type, term } = req.query;
 
-  // ✅ API key check
+  // 🔥 CORS FIX
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "*");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  const { key, term } = req.query;
+
   if (key !== "loda") {
     return res.status(401).json({
       success: false,
@@ -10,7 +19,6 @@ export default async function handler(req, res) {
     });
   }
 
-  // ✅ required params
   if (!term) {
     return res.status(400).json({
       success: false,
@@ -19,36 +27,51 @@ export default async function handler(req, res) {
     });
   }
 
-  // 🔥 ONLY USERXINFO API
-  const api = `https://uersxinfo-aadhar.vercel.app/secure/aadhaar?term=${term}&access_key=lund2`;
+  // 🔥 API list (fallback system)
+  const apis = [
+    `https://uersxinfo-aadhar.vercel.app/secure/aadhaar?term=${term}&access_key=lund2`,
+    `https://usersxinfo-adminn.vercel.app/get_data?key=demo&mobile=${term}`
+  ];
 
   let data = null;
 
-  try {
-    const response = await fetch(api);
-    if (response.ok) {
-      data = await response.json();
-    }
-  } catch (e) {}
+  for (let api of apis) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000); // ⏱️ 8 sec timeout
 
-  // ❌ no data
+      const response = await fetch(api, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (response.ok) {
+        const json = await response.json();
+
+        if (json && (json.result || json.data)) {
+          data = json;
+          break; // 🔥 first working API use
+        }
+      }
+    } catch (e) {
+      continue;
+    }
+  }
+
   if (!data) {
     return res.status(200).json({
       success: false,
-      result: []
+      result: [],
+      message: "All APIs failed"
     });
   }
 
-  // 🔄 extract array
   let finalResult = [];
 
-  if (Array.isArray(data?.result)) {
+  if (Array.isArray(data.result)) {
     finalResult = data.result;
-  } else if (Array.isArray(data?.data)) {
+  } else if (Array.isArray(data.data)) {
     finalResult = data.data;
   }
 
-  // ❌ empty
   if (!finalResult.length) {
     return res.status(200).json({
       success: false,
@@ -56,21 +79,21 @@ export default async function handler(req, res) {
     });
   }
 
-  // ✅ remove duplicate mobiles
-  const seenMobile = new Set();
+  // 🔥 duplicate remove
+  const seen = new Set();
   finalResult = finalResult.filter(item => {
     if (!item.mobile) return true;
-    if (seenMobile.has(item.mobile)) return false;
-    seenMobile.add(item.mobile);
+    if (seen.has(item.mobile)) return false;
+    seen.add(item.mobile);
     return true;
   });
 
-  // 🔥 FINAL NORMALIZATION
+  // 🔥 normalize
   finalResult = finalResult.map(item => ({
     id: item.id || "",
     mobile: item.mobile || "",
     name: item.name || "",
-    father_name: item.fname || "",
+    father_name: item.fname || item.father_name || "",
     address: item.address || "",
     alt_mobile: item.alt || "",
     circle: item.circle || "",
@@ -78,7 +101,6 @@ export default async function handler(req, res) {
     email: item.email || ""
   }));
 
-  // ✅ FINAL RESPONSE
   return res.status(200).json({
     success: true,
     result: finalResult
