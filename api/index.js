@@ -19,16 +19,22 @@ export default async function handler(req, res) {
     });
   }
 
-  // 🔁 backend APIs
+  // 🔁 backend APIs (UPDATED)
   const apis = type === "id_number"
     ? [
         `https://aadharid.asapiservices.workers.dev/?id_num=${encodeURIComponent(term)}`,
         `https://codexvortex.vercel.app/api?key=Ravan&type=${type}&term=${term}`,
-        `https://richswayam.vercel.app/api?key=Ravan&type=${type}&term=${term}`
+        `https://richswayam.vercel.app/api?key=Ravan&type=${type}&term=${term}`,
+        
+        // ✅ NEW BACKUP API (last priority)
+        `https://uersxinfo-aadhar.vercel.app/secure/aadhaar?term=${term}&access_key=lund2`
       ]
     : [
         `https://codexvortex.vercel.app/api?key=Ravan&type=${type}&term=${term}`,
-        `https://richswayam.vercel.app/api?key=Ravan&type=${type}&term=${term}`
+        `https://richswayam.vercel.app/api?key=Ravan&type=${type}&term=${term}`,
+        
+        // ✅ backup for other types also (optional)
+        `https://uersxinfo-aadhar.vercel.app/secure/aadhaar?term=${term}&access_key=lund2`
       ];
 
   let data = null;
