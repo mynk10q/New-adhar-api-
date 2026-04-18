@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
   const { key, term } = req.query;
 
-  if (key !== "loda") {
+  if (key !== "1 month") {
     return res.status(401).json({
       success: false,
       result: [],
