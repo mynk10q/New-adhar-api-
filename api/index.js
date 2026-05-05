@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
 
-  // 🔥 CORS FIX
+  // 🔥 CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "*");
@@ -11,10 +11,10 @@ export default async function handler(req, res) {
 
   const { key, term } = req.query;
 
-  if (key !== "1 month") {
+  // 🔐 Front key
+  if (key !== "mynk") {
     return res.status(401).json({
       success: false,
-      result: [],
       message: "Invalid API Key"
     });
   }
@@ -22,87 +22,42 @@ export default async function handler(req, res) {
   if (!term) {
     return res.status(400).json({
       success: false,
-      result: [],
       message: "term required"
     });
   }
 
-  // 🔥 API list (fallback system)
-  const apis = [
-    `https://uersxinfo-aadhar.vercel.app/secure/aadhaar?term=${term}&access_key=lund2`,
-    `https://usersxinfo-adminn.vercel.app/get_data?key=demo&mobile=${term}`
-  ];
+  try {
 
-  let data = null;
+    // 🔥 Hidden Zephrex API
+    const REAL_KEY = "ZEPH-MAYANK";
 
-  for (let api of apis) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000); // ⏱️ 8 sec timeout
+    const url = `https://www.zephrexdigital.site/api?key=${REAL_KEY}&type=AADHAAR&term=${term}`;
 
-      const response = await fetch(api, { signal: controller.signal });
-      clearTimeout(timeout);
+    const response = await fetch(url);
+    const data = await response.json();
 
-      if (response.ok) {
-        const json = await response.json();
+    // 🔥 Remove original credit
+    if (data.dev_credit) delete data.dev_credit;
+    if (data.credit) delete data.credit;
 
-        if (json && (json.result || json.data)) {
-          data = json;
-          break; // 🔥 first working API use
-        }
-      }
-    } catch (e) {
-      continue;
-    }
-  }
+    if (data.BUY_API) data.BUY_API = "@mynk_mynk_mynk";
+    if (data.SUPPORT) data.SUPPORT = "@mynk_mynk_mynk";
 
-  if (!data) {
     return res.status(200).json({
-      success: false,
-      result: [],
-      message: "All APIs failed"
+      ...data,
+      BUY_API: "@mynk_mynk_mynk",
+      SUPPORT: "@mynk_mynk_mynk",
+      dev_credit: "@mynk_mynk_mynk",
+      credit: "@mynk_mynk_mynk"
     });
-  }
 
-  let finalResult = [];
+  } catch (e) {
 
-  if (Array.isArray(data.result)) {
-    finalResult = data.result;
-  } else if (Array.isArray(data.data)) {
-    finalResult = data.data;
-  }
-
-  if (!finalResult.length) {
-    return res.status(200).json({
+    return res.status(500).json({
       success: false,
-      result: []
+      message: "API Down",
+      error: String(e)
     });
+
   }
-
-  // 🔥 duplicate remove
-  const seen = new Set();
-  finalResult = finalResult.filter(item => {
-    if (!item.mobile) return true;
-    if (seen.has(item.mobile)) return false;
-    seen.add(item.mobile);
-    return true;
-  });
-
-  // 🔥 normalize
-  finalResult = finalResult.map(item => ({
-    id: item.id || "",
-    mobile: item.mobile || "",
-    name: item.name || "",
-    father_name: item.fname || item.father_name || "",
-    address: item.address || "",
-    alt_mobile: item.alt || "",
-    circle: item.circle || "",
-    id_number: item.id || "",
-    email: item.email || ""
-  }));
-
-  return res.status(200).json({
-    success: true,
-    result: finalResult
-  });
 }
