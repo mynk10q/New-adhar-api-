@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
   const { key, term } = req.query;
 
-  // 🔐 API Key Check
+  // 🔐 API KEY
   if (key !== "mynk") {
     return res.status(401).json({
       success: false,
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
 
   try {
 
-    // 🔥 Hidden Main API
+    // 🔥 Hidden API
     const REAL_KEY = "ZEPH-MAYANK";
 
     const url =
@@ -38,25 +38,33 @@ export default async function handler(req, res) {
     const response = await fetch(url);
     const data = await response.json();
 
-    // ✅ Result Safe
-    const results = Array.isArray(data.result)
-      ? data.result.map((x) => ({
-          id: x.id || "",
-          mobile: x.mobile || "",
-          name: x.name || "",
-          father_name: x.father_name || "",
-          address: x.address || "",
-          alt_mobile: x.alt_mobile || "",
-          circle: x.circle || "",
-          email: x.email || ""
-        }))
-      : [];
+    // ✅ Correct Result Fetch
+    let raw = [];
 
-    // ✅ Final Clean Response
+    if (Array.isArray(data.result)) {
+      raw = data.result;
+    }
+    else if (data.data && Array.isArray(data.data.result)) {
+      raw = data.data.result;
+    }
+
+    // ✅ Clean Format
+    const result = raw.map((x) => ({
+      id: x.id || "",
+      mobile: x.mobile || "",
+      name: x.name || "",
+      father_name: x.father_name || x.fname || "",
+      address: x.address || "",
+      alt_mobile: x.alt_mobile || x.alt || "",
+      circle: x.circle || "",
+      email: x.email || ""
+    }));
+
+    // ✅ Final Response
     return res.status(200).json({
       success: true,
-      count: results.length,
-      result: results
+      count: result.length,
+      result
     });
 
   } catch (e) {
