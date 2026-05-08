@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
 
-  // 🔥 CORS
+  // ✅ CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "*");
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
   const { key, term } = req.query;
 
-  // 🔐 Front key
+  // 🔐 API Key Check
   if (key !== "mynk") {
     return res.status(401).json({
       success: false,
@@ -19,6 +19,7 @@ export default async function handler(req, res) {
     });
   }
 
+  // ❌ No term
   if (!term) {
     return res.status(400).json({
       success: false,
@@ -28,27 +29,34 @@ export default async function handler(req, res) {
 
   try {
 
-    // 🔥 Hidden Zephrex API
+    // 🔥 Hidden Main API
     const REAL_KEY = "ZEPH-MAYANK";
 
-    const url = `https://www.zephrexdigital.site/api?key=${REAL_KEY}&type=AADHAAR&term=${term}`;
+    const url =
+      `https://www.zephrexdigital.site/api?key=${REAL_KEY}&type=AADHAAR&term=${term}`;
 
     const response = await fetch(url);
     const data = await response.json();
 
-    // 🔥 Remove original credit
-    if (data.dev_credit) delete data.dev_credit;
-    if (data.credit) delete data.credit;
+    // ✅ Result Safe
+    const results = Array.isArray(data.result)
+      ? data.result.map((x) => ({
+          id: x.id || "",
+          mobile: x.mobile || "",
+          name: x.name || "",
+          father_name: x.father_name || "",
+          address: x.address || "",
+          alt_mobile: x.alt_mobile || "",
+          circle: x.circle || "",
+          email: x.email || ""
+        }))
+      : [];
 
-    if (data.BUY_API) data.BUY_API = "@mynk_mynk_mynk";
-    if (data.SUPPORT) data.SUPPORT = "@mynk_mynk_mynk";
-
+    // ✅ Final Clean Response
     return res.status(200).json({
-      ...data,
-      BUY_API: "@mynk_mynk_mynk",
-      SUPPORT: "@mynk_mynk_mynk",
-      dev_credit: "@mynk_mynk_mynk",
-      credit: "@mynk_mynk_mynk"
+      success: true,
+      count: results.length,
+      result: results
     });
 
   } catch (e) {
