@@ -29,50 +29,26 @@ export default async function handler(req, res) {
 
   try {
 
-    // 🔥 Hidden API
-    const REAL_KEY = "ZEPH-MAYANK";
-
+    // 🔥 Hidden Backend
     const url =
-      `https://www.zephrexdigital.site/api?key=${REAL_KEY}&type=AADHAAR&term=${term}`;
+      `https://www.zephrexdigital.site/api?key=ZEPH-MAYANK&type=AADHAAR&term=${term}`;
 
     const response = await fetch(url);
     const data = await response.json();
 
-    // ✅ Correct Result Fetch
-    let raw = [];
-
-    if (Array.isArray(data.result)) {
-      raw = data.result;
-    }
-    else if (data.data && Array.isArray(data.data.result)) {
-      raw = data.data.result;
-    }
-
-    // ✅ Clean Format
-    const result = raw.map((x) => ({
-      id: x.id || "",
-      mobile: x.mobile || "",
-      name: x.name || "",
-      father_name: x.father_name || x.fname || "",
-      address: x.address || "",
-      alt_mobile: x.alt_mobile || x.alt || "",
-      circle: x.circle || "",
-      email: x.email || ""
-    }));
-
-    // ✅ Final Response
+    // ✅ Return Response
     return res.status(200).json({
       success: true,
-      count: result.length,
-      result
+      developer: "@yourx_mynk",
+      result: data
     });
 
-  } catch (e) {
+  } catch (err) {
 
     return res.status(500).json({
       success: false,
-      message: "API Down",
-      error: String(e)
+      message: "Server Error",
+      error: err.message
     });
 
   }
