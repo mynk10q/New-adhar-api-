@@ -29,17 +29,21 @@ export default async function handler(req, res) {
 
   try {
 
-    // 🔥 Hidden Backend
+    // 🔥 Backend API
     const url =
       `https://www.zephrexdigital.site/api?key=ZEPH-MAYANK&type=AADHAAR&term=${term}`;
 
     const response = await fetch(url);
     const data = await response.json();
 
-    // ✅ Return Response
+    // ✅ Change Branding
+    data.BUY_API = "@mynk_mynk_mynk";
+    data.SUPPORT = "@mynk_mynk_mynk";
+
+    // ✅ Final Response
     return res.status(200).json({
       success: true,
-      developer: "@yourx_mynk",
+      developer: "@mynk_mynk_mynk",
       result: data
     });
 
