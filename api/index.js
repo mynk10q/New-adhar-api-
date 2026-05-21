@@ -5,15 +5,13 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "*");
 
-  // ✅ OPTIONS
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
-  // ✅ QUERY
   const { key, term } = req.query;
 
-  // 🔐 API KEY CHECK
+  // 🔐 API KEY
   if (key !== "mynk") {
     return res.status(401).json({
       success: false,
@@ -38,19 +36,46 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // ❌ REMOVE TAG
-    delete data.tag;
+    // ✅ SAME TO SAME KEYMAPPING
+    const formatted = {
+      success: true,
+      result: (data.result || []).map(item => ({
+        id: item.id || item.id_number || "NA",
+        mobile: item.mobile || item.MOBILE || "NA",
+        name: item.name || item.NAME || "NA",
+        father_name:
+          item.father_name ||
+          item.fname ||
+          item.FNAME ||
+          "NA",
 
-    // ❌ REMOVE USERXINFO BRANDING
-    delete data.BUY_API;
-    delete data.SUPPORT;
+        address:
+          item.address ||
+          item.ADDRESS ||
+          "NA",
 
-    // ✅ CUSTOM BRANDING
-    data.BUY_API = "@mynk_mynk_mynk";
-    data.SUPPORT = "@mynk_mynk_mynk";
+        alt_mobile:
+          item.alt_mobile ||
+          item.alt ||
+          "NA",
+
+        circle:
+          item.circle ||
+          "NA",
+
+        id_number:
+          item.id_number ||
+          item.id ||
+          "NA",
+
+        email:
+          item.email ||
+          ""
+      }))
+    };
 
     // ✅ FINAL RESPONSE
-    return res.status(200).json(data);
+    return res.status(200).json(formatted);
 
   } catch (err) {
 
