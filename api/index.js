@@ -5,13 +5,15 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "*");
 
+  // ✅ OPTIONS
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
+  // ✅ QUERY
   const { key, term } = req.query;
 
-  // 🔐 API KEY
+  // 🔐 API KEY CHECK
   if (key !== "mynk") {
     return res.status(401).json({
       success: false,
@@ -19,7 +21,7 @@ export default async function handler(req, res) {
     });
   }
 
-  // ❌ No term
+  // ❌ TERM REQUIRED
   if (!term) {
     return res.status(400).json({
       success: false,
@@ -29,31 +31,26 @@ export default async function handler(req, res) {
 
   try {
 
-    // 🔥 NEW BACKEND API
-    const url =
-      `https://users-xinfo-admin-eight.vercel.app/api?key=lljeliye&type=adhar&term=${term}`;
+    // 🔥 BACKEND API
+    const response = await fetch(
+      `https://users-xinfo-admin-eight.vercel.app/api?key=lljeliye&type=adhar&term=${term}`
+    );
 
-    const response = await fetch(url);
     const data = await response.json();
 
-    // ❌ Agar blank ya invalid data aaye
-    if (!data || Object.keys(data).length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No Data Found"
-      });
-    }
+    // ❌ REMOVE TAG
+    delete data.tag;
 
-    // ✅ Branding
+    // ❌ REMOVE USERXINFO BRANDING
+    delete data.BUY_API;
+    delete data.SUPPORT;
+
+    // ✅ CUSTOM BRANDING
     data.BUY_API = "@mynk_mynk_mynk";
     data.SUPPORT = "@mynk_mynk_mynk";
 
-    // ✅ Final Response
-    return res.status(200).json({
-      success: true,
-      developer: "@mynk_mynk_mynk",
-      result: data
-    });
+    // ✅ FINAL RESPONSE
+    return res.status(200).json(data);
 
   } catch (err) {
 
