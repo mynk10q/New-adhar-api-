@@ -29,14 +29,22 @@ export default async function handler(req, res) {
 
   try {
 
-    // 🔥 Backend API
+    // 🔥 NEW BACKEND API
     const url =
-      `https://www.zephrexdigital.site/api?key=ZEPH-MAYANK&type=AADHAAR&term=${term}`;
+      `https://users-xinfo-admin-eight.vercel.app/api?key=lljeliye&type=adhar&term=${term}`;
 
     const response = await fetch(url);
     const data = await response.json();
 
-    // ✅ Change Branding
+    // ❌ Agar blank ya invalid data aaye
+    if (!data || Object.keys(data).length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No Data Found"
+      });
+    }
+
+    // ✅ Branding
     data.BUY_API = "@mynk_mynk_mynk";
     data.SUPPORT = "@mynk_mynk_mynk";
 
